@@ -8,16 +8,16 @@ export default async function handler(req, res) {
 
     switch (event.type) {
       case 'invoice.payment_succeeded':
-        const subscription = event.data.object;
-        await updateAirtable(subscription.customer, 'premium');
+        const subscriptionSucceeded = event.data.object;
+        await updateAirtable(subscriptionSucceeded.customer, getSubscriptionStatus(subscriptionSucceeded));
         break;
       case 'customer.subscription.updated':
         const updatedSubscription = event.data.object;
-        await updateAirtable(updatedSubscription.customer, 'updated-status');
+        await updateAirtable(updatedSubscription.customer, getSubscriptionStatus(updatedSubscription));
         break;
       case 'customer.subscription.deleted':
         const deletedSubscription = event.data.object;
-        await updateAirtable(deletedSubscription.customer, 'cancelled');
+        await updateAirtable(deletedSubscription.customer, 'canceled');
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
@@ -28,6 +28,21 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
   }
 }
+
+const getSubscriptionStatus = (subscription) => {
+  const plan = subscription.plan.nickname;
+  switch (plan) {
+    case 'Free Monthly':
+    case 'Free Annually':
+    case 'Startup Monthly':
+    case 'Startup Annually':
+    case 'Enterprise Monthly':
+    case 'Enterprise Annually':
+      return plan;
+    default:
+      return 'unsubscribed'; // Handle any unexpected plans by marking them as unsubscribed
+  }
+};
 
 const updateAirtable = async (customerId, status) => {
   const airtablePat = process.env.AIRTABLE_PAT; // Updated to use AIRTABLE_PAT
@@ -46,7 +61,7 @@ const updateAirtable = async (customerId, status) => {
 
     await axios.patch(`https://api.airtable.com/v0/${airtableBaseId}/${tableName}/${userRecordId}`, {
       fields: {
-        Status: status
+        'Stripe Status': status
       }
     }, {
       headers: { Authorization: `Bearer ${airtablePat}` }
@@ -57,4 +72,3 @@ const updateAirtable = async (customerId, status) => {
     console.log('No matching record found in Airtable');
   }
 };
-
