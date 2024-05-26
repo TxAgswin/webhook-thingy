@@ -1,6 +1,8 @@
 const axios = require('axios');
 
 export default async function handler(req, res) {
+  console.log('Received event:', req.body); // Log the received event
+
   if (req.method === 'POST') {
     const event = req.body;
 
@@ -28,22 +30,31 @@ export default async function handler(req, res) {
 }
 
 const updateAirtable = async (customerId, status) => {
-  const airtableApiKey = process.env.AIRTABLE_API_KEY;
+  const airtablePat = process.env.AIRTABLE_PAT; // Updated to use AIRTABLE_PAT
   const airtableBaseId = process.env.AIRTABLE_BASE_ID;
   const tableName = 'Users';
 
+  console.log('Updating Airtable:', { customerId, status }); // Log the update details
+
   const records = await axios.get(`https://api.airtable.com/v0/${airtableBaseId}/${tableName}`, {
-    headers: { Authorization: `Bearer ${airtableApiKey}` },
+    headers: { Authorization: `Bearer ${airtablePat}` },
     params: { filterByFormula: `{StripeCustomerId} = '${customerId}'` }
   });
 
-  const userRecordId = records.data.records[0].id;
+  if (records.data.records.length > 0) {
+    const userRecordId = records.data.records[0].id;
 
-  await axios.patch(`https://api.airtable.com/v0/${airtableBaseId}/${tableName}/${userRecordId}`, {
-    fields: {
-      Status: status
-    }
-  }, {
-    headers: { Authorization: `Bearer ${airtableApiKey}` }
-  });
+    await axios.patch(`https://api.airtable.com/v0/${airtableBaseId}/${tableName}/${userRecordId}`, {
+      fields: {
+        Status: status
+      }
+    }, {
+      headers: { Authorization: `Bearer ${airtablePat}` }
+    });
+
+    console.log('Airtable update successful');
+  } else {
+    console.log('No matching record found in Airtable');
+  }
 };
+
