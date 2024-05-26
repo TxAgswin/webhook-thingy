@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         break;
       case 'customer.subscription.deleted':
         const deletedSubscription = event.data.object;
-        await updateAirtable(deletedSubscription.customer, 'canceled');
+        await updateAirtable(deletedSubscription.customer, 'cancelled');
         break;
       default:
         console.log(`Unhandled event type ${event.type}`);
@@ -30,15 +30,20 @@ export default async function handler(req, res) {
 }
 
 const getSubscriptionStatus = (subscription) => {
-  const plan = subscription.plan.nickname;
-  switch (plan) {
-    case 'Free Monthly':
-    case 'Free Annually':
-    case 'Startup Monthly':
-    case 'Startup Annually':
-    case 'Enterprise Monthly':
-    case 'Enterprise Annually':
-      return plan;
+  const priceId = subscription.items.data[0].price.id; // Adjust based on your subscription structure
+  switch (priceId) {
+    case 'price_1PI4avIXOfDZHEIyCQgXTr2n':
+      return 'free monthly';
+    case 'price_1PI4bfIXOfDZHEIyRgiLdXW5':
+      return 'free annually';
+    case 'price_1PI3hPIXOfDZHEIyi9HqCypi':
+      return 'startup monthly';
+    case 'price_1PI3kWIXOfDZHEIynAqsnrcm':
+      return 'startup annually';
+    case 'price_1PI3lhIXOfDZHEIypNUg0Sv0':
+      return 'enterprise monthly';
+    case 'price_1PI3n9IXOfDZHEIyKeNg2orT':
+      return 'enterprise annually';
     default:
       return 'unsubscribed'; // Handle any unexpected plans by marking them as unsubscribed
   }
